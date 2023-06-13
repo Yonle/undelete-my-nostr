@@ -1,0 +1,26 @@
+Hey hey, Read me first.
+So if you are curious, I will explain to you.
+
+So how is Nostr account deletion work?
+Well, If you are asking about that, That was actually really simple.
+
+You send metadata about your new profile, But you put "deleted: true" on it, like this:
+
+{
+  "name": "Yonle",
+  "display_name": "Yonle",
+  "about": "Self taught programmer from Indonesia",
+  "website": "https://yonle.lecturify.net",
+  "nip05": "yonle@yonle.lecturify.net",
+  "lud16": "humidprocess01@walletofsatoshi.com",
+  "deleted": true // <--- Here's the cause
+}
+
+So what was the project doing here is by sending Event Deletion event (or kind 5 event) about the conflicting event.
+
+Alright. So that's all about how it works.
+
+My Website : https://yonle.lecturify.net
+My Nostr   : 347a2370900d19b4e4756221594e8bda706ae5c785de09e59e4605f91a03f49c
+
+Try it: https://yonle.github.io/undelete-my-nostr
