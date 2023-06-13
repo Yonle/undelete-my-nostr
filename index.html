@@ -132,6 +132,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     <input type="password" placeholder="nsec / hex private key" /><br>
     <textarea placeholder="You need a working JavaScript browser enabled"></textarea><br>
     <button onclick="scan()">Undelete!</button>
+    <button onclick="switch_keepProfile()">Keep Profile</button>
     <pre>Logs:</pre>
   </div>
 
@@ -140,9 +141,19 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
   <script>
     const $ = document.querySelector.bind(document);
+    let keepProfile = false;
 
     function sourcecode() {
       alert(document.documentElement.innerHTML);
+    }
+
+    function switch_keepProfile() {
+      if (keepProfile) {
+        $("pre").innerText += "\n* Keep Profile is OFF.";
+        return keepProfile = false;
+      };
+      $("pre").innerText += "\n* Keep Profile is ON.";
+      keepProfile = true;
     }
     
     async function conn() {
@@ -165,34 +176,60 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
       events.forEach(data => {
         try {
-          const meta = JSON.parse(data.content);
+          let meta = JSON.parse(data.content);
           // $("pre").innerText += '\n* Data: ' + data.content;
           if (!meta.deleted) return;
           $("pre").innerText += `\n* Found deleted user event: ${data.id}`;
           
-          const deletemeta = {
+          let deletemeta = {
             created_at: Math.floor(Date.now() / 1000),
             kind: 5,
             pubkey,
             content: "",
             tags: [["e", data.id]]
           }
+
+          delete meta.deleted;
+
+          let newmeta = {
+            created_at: Math.floor(Date.now() / 1000),
+            kind: 0,
+            pubkey,
+            content: JSON.stringify(meta),
+            tags: []
+          }
           
           deletemeta.id = window.NostrTools.getEventHash(deletemeta);
           deletemeta.sig = window.NostrTools.getSignature(deletemeta, privkey);
-          
+
+          newmeta.id = window.NostrTools.getEventHash(newmeta);
+          newmeta.sig = window.NostrTools.getSignature(newmeta, privkey);
+
           const ok = window.NostrTools.validateEvent(deletemeta);
           const veryOk = window.NostrTools.verifySignature(deletemeta);
+
+          const newmeta_ok = window.NostrTools.validateEvent(newmeta);
+          const newmeta_veryOk = window.NostrTools.verifySignature(newmeta);
           
-          if (ok && veryOk) {
+          if (ok && veryOk && newmeta_ok && newmeta_veryOk) {
             $("pre").innerText += '\n* Deleting event: ' + data.id
-            const pub = pool.publish(relays, deletemeta);
-            pub.on('ok', data =>
-              $("pre").innerText += `\n* OK: ${data}`
+            const delpub = pool.publish(relays, deletemeta);
+            delpub.on('ok', data =>
+              $("pre").innerText += `\n* DEL OK: ${data}`
             );
 
-            pub.on('failed', data =>
-              $("pre").innerText += `\n* FAILED: ${data}`
+            delpub.on('failed', data =>
+              $("pre").innerText += `\n* DEL FAILED: ${data}`
+            );
+
+            if (keepProfile) return;
+            const newpub = pool.publish(relays, newmeta);
+            newpub.on('ok', data =>
+              $("pre").innerText += `\n* FIX OK: ${data}`
+            );
+
+            newpub.on('failed', data =>
+              $("pre").innerText += `\n* FIX FAILED: ${data}`
             );
           }
         } catch {
@@ -215,6 +252,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     }
     
     $("pre").innerText += "\n* nostr-tools loaded from https://unpkg.com/nostr-tools/lib/nostr.bundle.js";
+    $("pre").innerText += "\n* Keep Profile is OFF.";
     if (window.NostrTools) $("textarea").placeholder = "wss://relay.example1.com\nwss://relay.example2.com\n....";
     
     if (localStorage.getItem("relays")) {
