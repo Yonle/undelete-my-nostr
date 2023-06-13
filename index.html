@@ -145,7 +145,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       alert(document.documentElement.innerHTML);
     }
     
-    function scan() {
+    async function conn() {
       if (!$("textarea").value || !$('input').value) return alert("Please insert private Key & list of nostr relays.");
       const privkey = $("input").value.startsWith("nsec") ? window.NostrTools.nip19.decode($('input').value).data : $('input').value;
       const pubkey = window.NostrTools.getPublicKey(privkey);
@@ -158,12 +158,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       $("pre").innerText += `\n* Connecting to ${relays.length} relays....`
       $("button").disabled = true;
       
-      const sub = pool.sub(relays, [{
+      const events = await pool.list(relays, [{
         authors: [pubkey],
         kinds: [0]
       }]);
-      
-      sub.on('event', data => {
+
+      events.forEach(data => {
         try {
           const meta = JSON.parse(data.content);
           // $("pre").innerText += '\n* Data: ' + data.content;
@@ -199,10 +199,19 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           $("pre").innerText += `\n* Invalid JSON metadata at ${data.id}`;
         }
       });
-      
-      sub.on('eose', _ => {
-        $("pre").innerText += '\n* EOSE Received. Listening for new similiar event.';
-      });
+
+      return;
+    }
+
+    async function scan() {
+      try {
+        await conn();
+        $("pre").innerText += '\n* Done.'
+      } catch (e) {
+        $("pre").innerText += `\n* Error: ${e.toString}`;
+      }
+
+      $("button").disabled = false;
     }
     
     $("pre").innerText += "\n* nostr-tools loaded from https://unpkg.com/nostr-tools/lib/nostr.bundle.js";
