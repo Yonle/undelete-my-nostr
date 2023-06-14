@@ -257,6 +257,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     
     if (localStorage.getItem("relays")) {
       $("textarea").value = JSON.parse(localStorage.getItem("relays")).join("\n");
+    } else if (typeof(window.nostr) === "object") {
+      $("pre").innerText += "\n* NIP-07 detected. Getting relay list...."
+      window.nostr.getRelays().then(relays => {
+        $("textarea").value = Object.keys(relays).join("\n");
+      }).catch(_ => $("pre").innerText += `\n* window.nostr.getRelays() rejected: ${_.toString()}`);
     }
   </script>
 </body>
