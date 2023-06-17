@@ -250,10 +250,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
       $("button").disabled = false;
     }
-    
+
+    if (!window.NostrTools) return alert("Could not load nostr-tools from https://unpkg.com/nostr-tools/lib/nostr.bundle.js. Please refresh.");
     $("pre").innerText += "\n* nostr-tools loaded from https://unpkg.com/nostr-tools/lib/nostr.bundle.js";
     $("pre").innerText += "\n* Keep Profile is OFF.";
-    if (window.NostrTools) $("textarea").placeholder = "wss://relay.example1.com\nwss://relay.example2.com\n....";
+    $("textarea").placeholder = "wss://relay.example1.com\nwss://relay.example2.com\n....";
     
     if (localStorage.getItem("relays")) {
       $("textarea").value = JSON.parse(localStorage.getItem("relays")).join("\n");
