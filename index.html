@@ -157,7 +157,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     }
     
     async function conn() {
-      if (!$("textarea").value || !$('input').value) return alert("Please insert private Key & list of nostr relays.");
+      if (!$("textarea").value || !$('input').value) return $("pre").innerText += '\n* Please insert a valid private key & list of nostr relays.';
       const privkey = $("input").value.startsWith("nsec") ? window.NostrTools.nip19.decode($('input').value).data : $('input').value;
       const pubkey = window.NostrTools.getPublicKey(privkey);
       const relays = $("textarea").value.split("\n");
@@ -251,18 +251,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       $("button").disabled = false;
     }
 
-    if (!window.NostrTools) return alert("Could not load nostr-tools from https://unpkg.com/nostr-tools/lib/nostr.bundle.js. Please refresh.");
-    $("pre").innerText += "\n* nostr-tools loaded from https://unpkg.com/nostr-tools/lib/nostr.bundle.js";
-    $("pre").innerText += "\n* Keep Profile is OFF.";
-    $("textarea").placeholder = "wss://relay.example1.com\nwss://relay.example2.com\n....";
+    if (!window.NostrTools) {
+      $("pre").innerHTML += '<br><span style="color: red; font-weight: bold;">* Could not load nostr-tools from https://unpkg.com/nostr-tools/lib/nostr.bundle.js. Please refresh.</span>';
+    } else {
+      $("pre").innerText += "\n* nostr-tools loaded from https://unpkg.com/nostr-tools/lib/nostr.bundle.js";
+      $("pre").innerText += "\n* Keep Profile is OFF.";
+      $("textarea").placeholder = "wss://relay.example1.com\nwss://relay.example2.com\n....";
     
-    if (localStorage.getItem("relays")) {
-      $("textarea").value = JSON.parse(localStorage.getItem("relays")).join("\n");
-    } else if (typeof(window.nostr) === "object") {
-      $("pre").innerText += "\n* NIP-07 detected. Getting relay list...."
-      window.nostr.getRelays().then(relays => {
-        $("textarea").value = Object.keys(relays).join("\n");
-      }).catch(_ => $("pre").innerText += `\n* window.nostr.getRelays() rejected: ${_.toString()}`);
+      if (localStorage.getItem("relays")) {
+        $("textarea").value = JSON.parse(localStorage.getItem("relays")).join("\n");
+      } else if (typeof(window.nostr) === "object") {
+        $("pre").innerText += "\n* NIP-07 detected. Getting relay list...."
+        window.nostr.getRelays().then(relays => {
+          $("textarea").value = Object.keys(relays).join("\n");
+        }).catch(_ => $("pre").innerText += `\n* window.nostr.getRelays() rejected: ${_.toString()}`);
+      }
     }
   </script>
 </body>
