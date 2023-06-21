@@ -129,7 +129,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   <p>Undelete my Nostr account!</p>
 
   <div>
-    <input type="password" placeholder="nsec / hex private key" /><br>
+    <input type="password" placeholder="nsec / hex private key (or use NIP-07)" /><br>
     <textarea placeholder="You need a working JavaScript browser enabled"></textarea><br>
     <button onclick="scan()">Undelete!</button>
     <button onclick="switch_keepProfile()">Keep Profile</button>
@@ -155,16 +155,34 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       $("pre").innerText += "\n* Keep Profile is ON.";
       keepProfile = true;
     }
+
+    async function signEvent(event, privkey) {
+      event.created_at = Math.floor(Date.now() / 1000);
+
+      if (!privkey && window.nostr && typeof(window.nostr) === "object") {
+        event = await window.nostr.signEvent(event);
+      } else {
+        event.pubkey = window.NostrTools.getPublicKey(privkey);
+        event.id = window.NostrTools.getEventHash(event);
+        event.sig = window.NostrTools.getSignature(event, privkey);
+      }
+
+      $("pre").innerText += `\n* Signed ${event.id} with ${event.pubkey}`
+
+      return event;
+    }
     
     async function conn() {
-      if (!$("textarea").value || !$('input').value) return $("pre").innerText += '\n* Please insert a valid private key & list of nostr relays.';
-      const privkey = $("input").value.startsWith("nsec") ? window.NostrTools.nip19.decode($('input').value).data : $('input').value;
-      const pubkey = window.NostrTools.getPublicKey(privkey);
-      const relays = $("textarea").value.split("\n");
-      const pool = new window.NostrTools.SimplePool();
-      
+      if (!window.nostr && (!$("textarea").value || !$('input').value)) return $("pre").innerText += '\n* Please insert a valid private key & list of nostr relays.';
+      let privkey = $("input").value.startsWith("nsec") ? window.NostrTools.nip19.decode($('input').value).data : $('input').value;
+      let pubkey = (!privkey && window.nostr) ? await window.nostr.getPublicKey() : window.NostrTools.getPublicKey(privkey);
+      let relays = $("textarea").value.split("\n").filter(i => i);
+      let pool = new window.NostrTools.SimplePool();
+
+      if (!relays.length && window.nostr) relays = Object.keys(await window.nostr.getRelays());
       localStorage.setItem("relays", JSON.stringify(relays));
-      
+
+      $("textarea").value = relays.join("\n");
       $("pre").innerText += "\n* Pubkey is " + pubkey;
       $("pre").innerText += `\n* Connecting to ${relays.length} relays....`
       $("button").disabled = true;
@@ -174,7 +192,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         kinds: [0]
       }]);
 
-      events.forEach(data => {
+      events.forEach(async data => {
         try {
           let meta = JSON.parse(data.content);
           // $("pre").innerText += '\n* Data: ' + data.content;
@@ -182,9 +200,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           $("pre").innerText += `\n* Found deleted user event: ${data.id}`;
           
           let deletemeta = {
-            created_at: Math.floor(Date.now() / 1000),
             kind: 5,
-            pubkey,
             content: "",
             tags: [["e", data.id]]
           }
@@ -192,18 +208,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           delete meta.deleted;
 
           let newmeta = {
-            created_at: Math.floor(Date.now() / 1000),
             kind: 0,
-            pubkey,
             content: JSON.stringify(meta),
             tags: []
           }
-          
-          deletemeta.id = window.NostrTools.getEventHash(deletemeta);
-          deletemeta.sig = window.NostrTools.getSignature(deletemeta, privkey);
 
-          newmeta.id = window.NostrTools.getEventHash(newmeta);
-          newmeta.sig = window.NostrTools.getSignature(newmeta, privkey);
+          deletemeta = await signEvent(deletemeta, privkey);
+          newmeta = await signEvent(newmeta, privkey);
 
           const ok = window.NostrTools.validateEvent(deletemeta);
           const veryOk = window.NostrTools.verifySignature(deletemeta);
@@ -231,9 +242,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             newpub.on('failed', data =>
               $("pre").innerText += `\n* FIX FAILED: ${data}`
             );
+          } else {
+            $("pre").innerText += "\n* Signed event message is invalid. Please check the following:"
+            $("pre").innerText += "\n* " + JSON.parse(deletemeta);
+            if (!keepProfile) $("pre").innerText += "\n* " + JSON.parse(newmeta);
           }
-        } catch {
-          $("pre").innerText += `\n* Invalid JSON metadata at ${data.id}`;
+        } catch (e) {
+          $("pre").innerText += `\n* ${e.toString()}`;
         }
       });
 
@@ -245,7 +260,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         await conn();
         $("pre").innerText += '\n* Done.'
       } catch (e) {
-        $("pre").innerText += `\n* Error: ${e.toString}`;
+        $("pre").innerText += `\n* ${e.toString()}`;
       }
 
       $("button").disabled = false;
@@ -260,11 +275,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     
       if (localStorage.getItem("relays")) {
         $("textarea").value = JSON.parse(localStorage.getItem("relays")).join("\n");
-      } else if (typeof(window.nostr) === "object") {
-        $("pre").innerText += "\n* NIP-07 detected. Getting relay list...."
-        window.nostr.getRelays().then(relays => {
-          $("textarea").value = Object.keys(relays).join("\n");
-        }).catch(_ => $("pre").innerText += `\n* window.nostr.getRelays() rejected: ${_.toString()}`);
       }
     }
   </script>
