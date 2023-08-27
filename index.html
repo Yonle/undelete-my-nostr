@@ -138,9 +138,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
   <a href="#sourcecode" onclick="sourcecode()">Source code</a> - <a href="https://github.com/Yonle/undelete-my-nostr">GitHub repository</a>
 
-  <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/nostr-tools@1.10.1/lib/nostr.bundle.min.js"></script>
   <script>
     const $ = document.querySelector.bind(document);
+    let pool = null;
     let keepProfile = false;
 
     function sourcecode() {
@@ -177,27 +178,26 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       let privkey = $("input").value.startsWith("nsec") ? window.NostrTools.nip19.decode($('input').value).data : $('input').value;
       let pubkey = (!privkey && window.nostr) ? await window.nostr.getPublicKey() : window.NostrTools.getPublicKey(privkey);
       let relays = $("textarea").value.split("\n").filter(i => i);
-      let pool = new window.NostrTools.SimplePool();
 
       if (!relays.length && window.nostr) relays = Object.keys(await window.nostr.getRelays());
       localStorage.setItem("relays", JSON.stringify(relays));
 
       $("textarea").value = relays.join("\n");
       $("pre").innerText += "\n* Pubkey is " + pubkey;
-      $("pre").innerText += `\n* Connecting to ${relays.length} relays....`
+      $("pre").innerText += `\n* You inserted ${relays.length} relays`
       $("button").disabled = true;
       
-      const events = await pool.list(relays, [{
+      $("pre").innerText += "\n* Now fetching for profile events. You do not need to wait it till finish.";
+
+      pool.sub(relays, [{
         authors: [pubkey],
         kinds: [0]
-      }]);
-
-      events.forEach(async data => {
+      }]).on('event', async data => {
         try {
           let meta = JSON.parse(data.content);
-          // $("pre").innerText += '\n* Data: ' + data.content;
-          if (!meta.deleted) return;
-          $("pre").innerText += `\n* Found deleted user event: ${data.id}`;
+          //$("pre").innerText += '\n* Data: ' + data.content;
+          if (!meta.deleted) return $("pre").innerText += `\n * Your account looks fine: ${data.id}`;
+          $("pre").innerText += `\n * Your account is deleted: ${data.id}`;
           
           let deletemeta = {
             kind: 5,
@@ -258,24 +258,25 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     async function scan() {
       try {
         await conn();
-        $("pre").innerText += '\n* Done.'
       } catch (e) {
         $("pre").innerText += `\n* ${e.toString()}`;
+        $("button").disabled = false;
       }
-
-      $("button").disabled = false;
     }
 
     if (!window.NostrTools) {
-      $("pre").innerHTML += '<br><span style="color: red; font-weight: bold;">* Could not load nostr-tools from https://unpkg.com/nostr-tools/lib/nostr.bundle.js. Please refresh.</span>';
+      $("pre").innerHTML += '<br><span style="color: red; font-weight: bold;">* Could not load nostr-tools from https://cdn.jsdelivr.net/npm/nostr-tools@1.10.1/lib/nostr.bundle.min.js.<br>* Failed to load an library. Please refresh to try again.</span>';
+      $("button").disabled = true;
     } else {
-      $("pre").innerText += "\n* nostr-tools loaded from https://unpkg.com/nostr-tools/lib/nostr.bundle.js";
+      $("pre").innerText += "\n* nostr-tools loaded from https://cdn.jsdelivr.net/npm/nostr-tools@1.10.1/lib/nostr.bundle.min.js";
       $("pre").innerText += "\n* Keep Profile is OFF.";
       $("textarea").placeholder = "wss://relay.example1.com\nwss://relay.example2.com\n....";
     
       if (localStorage.getItem("relays")) {
         $("textarea").value = JSON.parse(localStorage.getItem("relays")).join("\n");
       }
+
+      pool = new window.NostrTools.SimplePool();
     }
   </script>
 </body>
