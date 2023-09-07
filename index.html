@@ -138,7 +138,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
   <a href="#sourcecode" onclick="sourcecode()">Source code</a> - <a href="https://github.com/Yonle/undelete-my-nostr">GitHub repository</a>
 
-  <script src="https://cdn.jsdelivr.net/npm/nostr-tools@1.10.1/lib/nostr.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/nostr-tools/lib/nostr.bundle.min.js"></script>
   <script>
     const $ = document.querySelector.bind(document);
     let pool = null;
@@ -196,8 +196,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         try {
           let meta = JSON.parse(data.content);
           //$("pre").innerText += '\n* Data: ' + data.content;
-          if (!meta.deleted) return $("pre").innerText += `\n * Your account looks fine: ${data.id}`;
-          $("pre").innerText += `\n * Your account is deleted: ${data.id}`;
+          if (!meta.deleted) return $("pre").innerText += `\n* Your account looks fine: ${data.id}`;
+          $("pre").innerText += `\n* Your account is deleted: ${data.id}`;
           
           let deletemeta = {
             kind: 5,
@@ -225,23 +225,27 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           if (ok && veryOk && newmeta_ok && newmeta_veryOk) {
             $("pre").innerText += '\n* Deleting event: ' + data.id
             const delpub = pool.publish(relays, deletemeta);
-            delpub.on('ok', data =>
-              $("pre").innerText += `\n* DEL OK: ${data}`
-            );
+            try {
+              delpub.on('ok', data =>
+                $("pre").innerText += `\n* DEL OK: ${data}`
+              );
 
-            delpub.on('failed', data =>
-              $("pre").innerText += `\n* DEL FAILED: ${data}`
-            );
+              delpub.on('failed', data =>
+                $("pre").innerText += `\n* DEL FAILED: ${data}`
+              );
+            } catch {}
 
             if (keepProfile) return;
             const newpub = pool.publish(relays, newmeta);
-            newpub.on('ok', data =>
-              $("pre").innerText += `\n* FIX OK: ${data}`
-            );
+            try {
+              newpub.on('ok', data =>
+                $("pre").innerText += `\n* FIX OK: ${data}`
+              );
 
-            newpub.on('failed', data =>
-              $("pre").innerText += `\n* FIX FAILED: ${data}`
-            );
+              newpub.on('failed', data =>
+                $("pre").innerText += `\n* FIX FAILED: ${data}`
+              );
+            } catch {}
           } else {
             $("pre").innerText += "\n* Signed event message is invalid. Please check the following:"
             $("pre").innerText += "\n* " + JSON.parse(deletemeta);
@@ -265,10 +269,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     }
 
     if (!window.NostrTools) {
-      $("pre").innerHTML += '<br><span style="color: red; font-weight: bold;">* Could not load nostr-tools from https://cdn.jsdelivr.net/npm/nostr-tools@1.10.1/lib/nostr.bundle.min.js.<br>* Failed to load an library. Please refresh to try again.</span>';
+      $("pre").innerHTML += '<br><span style="color: red; font-weight: bold;">* Could not load nostr-tools from https://cdn.jsdelivr.net/npm/nostr-tools/lib/nostr.bundle.min.js.<br>* Failed to load an library. Please refresh to try again.</span>';
       $("button").disabled = true;
     } else {
-      $("pre").innerText += "\n* nostr-tools loaded from https://cdn.jsdelivr.net/npm/nostr-tools@1.10.1/lib/nostr.bundle.min.js";
+      $("pre").innerText += "\n* nostr-tools loaded from https://cdn.jsdelivr.net/npm/nostr-tools/lib/nostr.bundle.min.js";
       $("pre").innerText += "\n* Keep Profile is OFF.";
       $("textarea").placeholder = "wss://relay.example1.com\nwss://relay.example2.com\n....";
     
