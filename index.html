@@ -138,7 +138,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
   <a href="#sourcecode" onclick="sourcecode()">Source code</a> - <a href="https://github.com/Yonle/undelete-my-nostr">GitHub repository</a>
 
-  <script src="https://cdn.jsdelivr.net/npm/nostr-tools/lib/nostr.bundle.min.js"></script>
+  <!--- nostr-tools. licensed under public domain --->
+  <script src="nostr.bundle.min.js" integrity="sha256-44c3fcd0c1250642e7c4a2c8861c4473faf6f09e3bf78b9d0bf1747e93c5266b"></script>
   <script>
     const $ = document.querySelector.bind(document);
     let pool = null;
@@ -272,7 +273,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       $("pre").innerHTML += '<br><span style="color: red; font-weight: bold;">* Could not load nostr-tools from https://cdn.jsdelivr.net/npm/nostr-tools/lib/nostr.bundle.min.js.<br>* Failed to load an library. Please refresh to try again.</span>';
       $("button").disabled = true;
     } else {
-      $("pre").innerText += "\n* nostr-tools loaded from https://cdn.jsdelivr.net/npm/nostr-tools/lib/nostr.bundle.min.js";
+      $("pre").innerText += "\n* nostr-tools loaded.";
       $("pre").innerText += "\n* Keep Profile is OFF.";
       $("textarea").placeholder = "wss://relay.example1.com\nwss://relay.example2.com\n....";
     
